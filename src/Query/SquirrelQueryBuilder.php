@@ -23,7 +23,13 @@ class SquirrelQueryBuilder extends Builder
      */
     public function newQuery()
     {
-        return new Builder($this->connection, $this->grammar, $this->processor);
+        $builder = new SquirrelQueryBuilder($this->connection, $this->grammar, $this->processor);
+
+        if( $this->sourceModel ) {
+            $builder->setSourceModel = $this->sourceModel;
+        }
+
+        return $builder;
     }
 
     /**
@@ -71,7 +77,7 @@ class SquirrelQueryBuilder extends Builder
         $cachedModels = $this->findCachedModels();
         
         if (!empty($cachedModels)) {
-            return $cachedModels;
+            return collect($cachedModels);
         }
 
         $results = parent::get($columns);

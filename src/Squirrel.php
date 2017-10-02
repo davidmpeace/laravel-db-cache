@@ -11,10 +11,15 @@ use Eloquent\Cache\Exceptions\InvalidSquirrelModelException;
  */
 trait Squirrel
 {
+    /**
+     * Constructor to validate the Model Extending Squirrel is actually a descendant of an Eloquen Model.
+     * 
+     * @param array $attributes
+     */
     public function __construct(array $attributes = [])
     {
         if (!is_subclass_of($this, "Illuminate\Database\Eloquent\Model")) {
-            throw new InvalidSquirrelModelException("Models using the Squirrel trait must also extend from the base Eloquent Model.");
+            throw new InvalidSquirrelModelException("Models using the Squirrel trait must extend from the base Eloquent Model.");
         }
 
         return parent::__construct($attributes);
@@ -162,10 +167,9 @@ trait Squirrel
      */
     protected function newBaseQueryBuilder()
     {
-        $conn         = $this->getConnection();
-        $grammar      = $conn->getQueryGrammar();
-        $queryBuilder = new SquirrelQueryBuilder($conn, $grammar, $conn->getPostProcessor());
+        $connection = $this->getConnection();
 
+        $queryBuilder = new SquirrelQueryBuilder($connection, $connection->getQueryGrammar(), $connection->getPostProcessor());
         $queryBuilder->setSourceModel($this);
 
         return $queryBuilder;
