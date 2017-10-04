@@ -76,8 +76,11 @@ class SquirrelCacheLog
 
         foreach( $models as $model ) {
 
-            $primaryKeyValue = $model->$primaryKey;
-        
+            $primaryKeyValue = "?";
+            if( property_exists($model, $primaryKey) ) {
+                $primaryKeyValue = $model->$primaryKey;
+            }
+
             $this->models[] = $this->entity . " [{$primaryKey}={$primaryKeyValue}]";
         }
     }
