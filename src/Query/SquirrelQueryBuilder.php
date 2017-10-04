@@ -4,6 +4,7 @@ namespace Eloquent\Cache\Query;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder;
 use Eloquent\Cache\SquirrelCache;
+use Eloquent\Cache\Timer\Timer;
 
 /**
  * This class is used as a proxy to the back-end Eloquent ORM.  It allows
@@ -74,10 +75,14 @@ class SquirrelQueryBuilder extends Builder
      */
     public function get($columns = array('*'))
     {
+        $timer = new Timer();
+
         $cachedModels = $this->findCachedModels();
         
         if (!empty($cachedModels)) {
-            return collect($cachedModels);
+            $cachedModels = collect($cachedModels);
+            SquirrelCache::logCacheHit($this, $timer, $cachedModels);
+            return $cachedModels;
         }
 
         $results = parent::get($columns);
@@ -85,6 +90,8 @@ class SquirrelQueryBuilder extends Builder
         foreach ($results as $result) {
             SquirrelCache::remember($this->sourceModel, (array)$result);
         }
+        
+        SquirrelCache::logCacheMiss($this, $timer, $results);
 
         return $results;
     }

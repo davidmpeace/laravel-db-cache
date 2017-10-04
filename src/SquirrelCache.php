@@ -2,6 +2,9 @@
 namespace Eloquent\Cache;
 
 use Illuminate\Database\Eloquent\Model;
+use Eloquent\Cache\Query\SquirrelQueryBuilder;
+use Illuminate\Support\Collection;
+use Eloquent\Cache\Timer\Timer;
 use Cache;
 
 class SquirrelCache
@@ -9,9 +12,14 @@ class SquirrelCache
     // Global config option that will set the cache to ON or OFF
     private static $cacheActive = true;
 
-
     // Simple way to namespace cache tags with a unique ID
     private static $cacheKeyPrefix = "Squirrel";
+
+    // Determines whether the squirrel cache logging is active. When active, it will log each query that hits the database, along with it's execution time, and any cache-misses.
+    private static $loggingActive = false;
+
+    // Array of SquirrelCacheLog objects.  Will only be filled when the squirrel cache log is activated.
+    private static $logs = [];
 
     /**
      * Set's the global cache active setting to true or false.  This is the master override switch to turn 
@@ -34,6 +42,79 @@ class SquirrelCache
         return (bool)static::$cacheActive;
     }
 
+    /**
+     * Set's the global logging active setting to true or false.
+     * 
+     * @param boolean $active
+     */
+    public static function setLoggingActive($active = true)
+    {
+        static::$loggingActive = $active;
+    }
+
+    /**
+     * Returns true if the global logging setting is currently active.
+     * 
+     * @return boolean
+     */
+    public static function isLoggingActive()
+    {
+        return static::$loggingActive;
+    }
+
+    /**
+     * Returns the array of logs.
+     * 
+     * @return [SquirrelCacheLog]
+     */
+    public static function getLogs()
+    {
+        return static::$logs;
+    }
+
+    /** 
+     * If logging is enabled, this will log a Cached hit.
+     *
+     */
+    public static function logCacheHit( SquirrelQueryBuilder $builder, Timer $timer, Collection $models )
+    {
+        return static::log( $cacheHit = true, $builder, $timer, $models );
+    }
+
+    /** 
+     * If logging is enabled, this will log a cache miss, meaning a query was run against the database.
+     *
+     */
+    public static function logCacheMiss( SquirrelQueryBuilder $builder, Timer $timer, Collection $models )
+    {
+        return static::log( $cacheHit = false, $builder, $timer, $models );
+    }
+
+    /**
+     * Private helper method, that adds a log record if logging is enabled.
+     * 
+     * @param  boolean              $cacheHit True if the cache was hit, and the DB was NOT queried
+     * @param  SquirrelQueryBuilder $builder  The SquirrelQueryBuilder instance
+     * @param  Timer                $timer    The squirrel Timer instance
+     * @param  Collection           $models   The collection of models being returned
+     */
+    private static function log( $cacheHit = false, SquirrelQueryBuilder $builder, Timer $timer, Collection $models )
+    {
+        if( !static::isLoggingActive() ) {
+            return;
+        }
+
+        $elapsed = $timer->elapsed();
+
+        $log           = new SquirrelCacheLog();
+        $log->cacheHit = $cacheHit;
+        $log->time     = $elapsed;
+
+        $log->setQueryFromBuilder($builder);
+        $log->setModels($builder, $models);
+
+        static::$logs[] = $log;
+    }
 
     /**
      * Set the prefix to be used when storing and retrieving cache records.
