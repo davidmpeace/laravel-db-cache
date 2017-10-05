@@ -140,10 +140,10 @@ Model::whereUuid('12345-12346-123456-12356')->first();
 // THESE QUERIES DO NOT WORK WITH CACHEING, AND WILL QUERY THE DB
 
 // WON'T CACHE because the "=" equals sign, and "in", are the only supported operators.
-User::where('id', '>', 50)->get();
+Model::where('id', '>', 50)->get();
 
 // WON'T CACHE because the field is not defined as a unique key on the model
-User::wherePlanId(23)->first();
+Model::wherePlanId(23)->first();
 ```
 
 ### Under the Hood
