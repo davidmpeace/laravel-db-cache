@@ -131,6 +131,28 @@ trait Squirrel
     }
 
     /**
+     * Remove all objects of this type of class from cache.
+     * NOTE: This method will only work if the default cache driver is redis.
+     * 
+     * @return null
+     */
+    final public function forgetAllWithSameClass()
+    {
+        SquirrelCache::forgetAllWithSameClass($this);
+    }
+
+    /**
+     * This method will count the number of cached objects that share the same class as this model.
+     * NOTE: This method will only work if the default cache driver is redis.
+     * 
+     * @return int
+     */
+    final public function countCachedWithSameClass()
+    {
+        return SquirrelCache::forgetAllWithSameClass($this);
+    }
+
+    /**
      * Returns all cache keys for this model instance.
      *
      * @access public

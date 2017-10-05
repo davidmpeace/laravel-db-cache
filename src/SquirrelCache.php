@@ -6,6 +6,7 @@ use Eloquent\Cache\Query\SquirrelQueryBuilder;
 use Illuminate\Support\Collection;
 use Eloquent\Cache\Timer\Timer;
 use Cache;
+use Exception;
 
 class SquirrelCache
 {
@@ -198,6 +199,7 @@ class SquirrelCache
             }
 
             ksort($keyedByColumn);
+
             $cacheKeys[$key] = $prefix . serialize($keyedByColumn);
         }
 
@@ -205,10 +207,11 @@ class SquirrelCache
     }
 
     /**
-     * [primaryCacheKey description]
-     * @param  Model      $sourceObject    [description]
-     * @param  array|null $modelAttributes [description]
-     * @return [type]                      [description]
+     * Returns the primary cache key for the model, which holds the full data for the object, rather than just a reference.
+     * 
+     * @param  Model      $sourceObject
+     * @param  array|null $modelAttributes
+     * @return string
      */
     public static function primaryCacheKey(Model $sourceObject, array $modelAttributes = null)
     {
@@ -257,6 +260,120 @@ class SquirrelCache
         foreach ($cacheKeys as $cacheKey) {
             Cache::forget($cacheKey);
         }
+    }
+
+    /**
+     * This method will remove all the cached objects that share the same class as the supplied model.
+     * NOTE: This method will only work if the default cache driver is redis.
+     * 
+     * @param  Model $sourceObject The model with the class to remove from cache.
+     * @return null
+     */
+    public static function forgetAllWithSameClass(Model $sourceObject)
+    {
+        $defaultCacheStoreType = static::defaultCacheStoreType();
+
+        if( $defaultCacheStoreType == 'redis' ) {
+            $searchKeys = addslashes(Cache::getPrefix() . static::getCacheKeyPrefix(get_class($sourceObject)) . "*");
+            
+            $keys = [];
+            try {
+                $redis = Cache::getRedis();
+                $keys = $redis->keys( $searchKeys );
+            }
+            catch( Exception $e ) {}
+
+            foreach( $keys as $key ) {
+                try {
+                    pre_dump($key);
+                }
+                catch( Exception $e ) {}            
+            }
+        }
+    }
+    
+    /**
+     * This method will count the number of cached objects that share the same class as the supplied model.
+     * NOTE: This method will only work if the default cache driver is redis.
+     * 
+     * @param  Model $sourceObject The model with the class to count cached records.
+     * @return null
+     */
+    public static function countCachedWithSameClass(Model $sourceObject)
+    {
+        return count(static::allCachedPrimaryKeysWithClass($sourceObject));
+    }
+
+    /**
+     * Returns an array of all the primary cache keys for all cached objects that share the same class as the supplied model 
+     * NOTE: This method will only work if the default cache driver is redis.
+     * 
+     * @param  Model $sourceObject The model with the class to return cached keys for.
+     * @return null
+     */
+    public static function allCachedPrimaryKeysWithSameClass(Model $sourceObject): array
+    {
+        $defaultCacheStoreType = static::defaultCacheStoreType();
+
+        if( $defaultCacheStoreType == 'redis' ) {
+            $prefix     = static::getCacheKeyPrefix(get_class($sourceObject));
+            $primaryKey = $sourceObject->getKeyName();
+            
+            if( !empty($primaryKey) ) {
+
+                $searchString = 'a:1:{s:'.strlen($primaryKey).':"'.$primaryKey.'";s:*:"*";}';
+                $searchKeys   = addslashes(Cache::getPrefix() . $prefix . $searchString);
+            
+                try {
+                    $redis = Cache::getRedis();
+                    return $redis->keys( $searchKeys );
+                }
+                catch( Exception $e ) {}
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * Flushes the entire SquirrelCache cache for all stored models, of every class type.
+     * NOTE: This method will only work if the default cache driver is redis.
+     * 
+     * @return null
+     */
+    public static function flushAll()
+    {
+        $defaultCacheStoreType = static::defaultCacheStoreType();
+
+        if( $defaultCacheStoreType == 'redis' ) {
+            $searchKeys = addslashes(Cache::getPrefix() . static::getCacheKeyPrefix() . "*");
+
+            $keys = [];
+            try {
+                $redis = Cache::getRedis();
+                $keys = $redis->keys( $searchKeys );
+            }
+            catch( Exception $e ) {}
+
+            foreach( $keys as $key ) {
+                try {
+                    $redis->del( $key );
+                }
+                catch( Exception $e ) {}            
+            }
+        }
+    }
+
+    /**
+     * Helper method to return the default store type.
+     * 
+     * @return null
+     */
+    private static function defaultCacheStoreType()
+    {
+        $defaultCacheStore     = config('cache.default');
+        $defaultCacheStoreType = config('cache.stores.' . $defaultCacheStore . ".driver");
+        return $defaultCacheStoreType;
     }
 
     /**

@@ -4,6 +4,7 @@ namespace Eloquent\Cache;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Eloquent\Cache\Query\SquirrelQueryBuilder;
+use stdClass;
 
 /**
  * This class is used to hold all relevant data for a SquirrelCache hit or miss.  When a query is executed against a model
@@ -83,6 +84,27 @@ class SquirrelCacheLog
 
             $this->models[] = $this->entity . " [{$primaryKey}={$primaryKeyValue}]";
         }
+    }
+
+    public static function summary(): stdClass
+    {
+        $logs = SquirrelCache::getLogs();
+
+        $summary = new stdClass();
+
+        $summary->totalDbQueryExecutionTime = static::totalQueryExecutionTime();
+        $summary->totalCacheHits            = 0;
+        $summary->totalDbQueries            = 0;
+
+        foreach( $logs as $log ) {
+            if( $log->cacheHit ) {
+                $summary->totalCacheHits++;
+            } else {
+                $summary->totalDbQueries++;
+            }
+        }
+
+        return $summary;
     }
 
     /**
