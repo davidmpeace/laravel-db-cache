@@ -228,6 +228,11 @@ class SquirrelCache
         $keys = static::cacheKeys($sourceObject, $modelAttributes);
         return array_get($keys, $sourceObject->getKeyName());
     }
+    
+    private static function cachedClassesKey()
+    {
+        return static::getCacheKeyPrefix() . "CachedClasses";
+    }
 
     /**
      * This method will store data for a model via all it's various keys.  Only the primary cache key will actually contain the model data,
@@ -253,6 +258,46 @@ class SquirrelCache
                 Cache::put($cacheKey, $primaryCacheKey, $expiration);
             }
         }
+
+        // Store the source object class, in our list of stored classes
+        $cachedClassesKey = static::cachedClassesKey();
+        $storedValue = Cache::get($cachedClassesKey);
+
+        $classes = [];
+        if( !empty($storedValue) ) {
+            $classes = unserialize($storedValue);
+        }
+
+        if( !in_array(get_class($sourceObject), $classes) ) {
+            $classes[] = get_class($sourceObject);
+            $classes   = serialize($classes);
+            Cache::put($cachedClassesKey, $classes, (60*24*365));
+        }
+    }
+
+    public static function cachedClasses(): array 
+    {
+        $cachedClassesKey = static::cachedClassesKey();
+        $storedValue = Cache::get($cachedClassesKey);
+
+        $classes = [];
+        if( !empty($storedValue) ) {
+            $classes = unserialize($storedValue);
+        }
+
+        return $classes;
+    }
+
+    public static function cachedClassesWithCacheCount(): array 
+    {
+        $classes = static::cachedClasses();
+
+        $classNamesAndCounts = [];
+        foreach( $classes as $className ) {
+            $classNamesAndCounts[ $className ] = static::countCachedWithSameClass( new $className() );
+        }
+
+        return $classNamesAndCounts;
     }
 
     /**
@@ -295,7 +340,7 @@ class SquirrelCache
 
             foreach( $keys as $key ) {
                 try {
-                    pre_dump($key);
+                    $redis->del( $key );
                 }
                 catch( Exception $e ) {}            
             }
