@@ -73,25 +73,10 @@ trait Squirrel
      * @static
      * @return bool Return true to use this trait for this Class, or false to disable.
      */
-    protected function isCacheActive()
+    public function isCacheActive()
     {
         // Defaulted the trait to Active
         return true;
-    }
-
-
-    /**
-     * Helper method to quickly determine if cacheing should be used for this class.  It will verify the model
-     * cache is active, and the global cache option is active.
-     *
-     * @access public
-     * @final
-     * @static
-     * @return boolean
-     */
-    final public function isCacheing()
-    {
-        return ($this->isCacheActive() && SquirrelCache::isCacheActive());
     }
 
     /**
@@ -106,6 +91,47 @@ trait Squirrel
     public function cacheExpirationMinutes()
     {
         return (60 * 24);
+    }
+
+    /**
+     * Helper method to quickly determine if cacheing should be used for this class.  It will verify the model
+     * cache is active, and the global cache option is active.
+     *
+     * @access public
+     * @final
+     * @static
+     * @return boolean
+     */
+    final public function isCacheing()
+    {
+        return ($this->isCacheActive() && SquirrelCache::isGlobalCacheActive());
+    }
+
+    /**
+     * Returns true if this model is currently stored in cache.
+     *
+     * @access public
+     * @final
+     * @static
+     * @return boolean
+     */
+    final public function isCached()
+    {
+        return !empty($this->cachedData());
+    }
+
+    /**
+     * Returns true if this model is currently stored in cache.
+     *
+     * @access public
+     * @final
+     * @static
+     * @return boolean
+     */
+    final public function cachedData()
+    {
+        $primaryCacheKey = $this->primaryCacheKey();
+        return SquirrelCache::get($primaryCacheKey, $checkEvenIfGlobalCacheIsInactive = true);
     }
 
     /**

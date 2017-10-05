@@ -11,7 +11,7 @@ use Exception;
 class SquirrelCache
 {
     // Global config option that will set the cache to ON or OFF
-    private static $cacheActive = true;
+    private static $globalCacheActive = true;
 
     // Simple way to namespace cache tags with a unique ID
     private static $cacheKeyPrefix = "Squirrel";
@@ -28,9 +28,9 @@ class SquirrelCache
      * 
      * @param boolean $active
      */
-    public static function setCacheActive($active = true)
+    public static function setGlobalCacheActive($active = true)
     {
-        static::$cacheActive = (bool)$active;
+        static::$globalCacheActive = (bool)$active;
     }
 
     /**
@@ -38,9 +38,9 @@ class SquirrelCache
      * 
      * @return boolean
      */
-    public static function isCacheActive()
+    public static function isGlobalCacheActive()
     {
-        return (bool)static::$cacheActive;
+        return (bool)static::$globalCacheActive;
     }
 
     /**
@@ -71,6 +71,16 @@ class SquirrelCache
     public static function getLogs()
     {
         return static::$logs;
+    }
+
+    /**
+     * Returns the summary of the logs data.
+     * 
+     * @return stdClass
+     */
+    public static function getLogSummary()
+    {
+        return SquirrelCacheLog::summary();
     }
 
     /** 
@@ -301,7 +311,7 @@ class SquirrelCache
      */
     public static function countCachedWithSameClass(Model $sourceObject)
     {
-        return count(static::allCachedPrimaryKeysWithClass($sourceObject));
+        return count(static::allCachedPrimaryKeysWithSameClass($sourceObject));
     }
 
     /**
@@ -383,11 +393,12 @@ class SquirrelCache
      * @access public
      * @static
      * @param  string $cacheKey
+     * @param  bool $checkEvenIfGlobalCacheIsInactive Will find the object, even if the global cache is off.
      * @return array|null
      */
-    public static function get($cacheKey)
+    public static function get($cacheKey, $checkEvenIfGlobalCacheIsInactive = false)
     {
-        if (!static::isCacheActive()) {
+        if (!$checkEvenIfGlobalCacheIsInactive && !static::isGlobalCacheActive()) {
             return false;
         }
 
