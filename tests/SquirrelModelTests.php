@@ -11,11 +11,11 @@ class SquirrelModelTests extends PHPUnit_Framework_TestCase
      */
     public function testSettings()
     {
-        SquirrelCache::setCacheActive(false);
-        $this->assertFalse( SquirrelCache::isCacheActive(), "Set Cache to inactive, but did not come back false." );
+        SquirrelCache::setGlobalCacheActive(false);
+        $this->assertFalse( SquirrelCache::isGlobalCacheActive(), "Set Cache to inactive, but did not come back false." );
 
-        SquirrelCache::setCacheActive(true);
-        $this->assertTrue( SquirrelCache::isCacheActive(), "Set Cache to active, but did not come back true." );
+        SquirrelCache::setGlobalCacheActive(true);
+        $this->assertTrue( SquirrelCache::isGlobalCacheActive(), "Set Cache to active, but did not come back true." );
 
         $prefix = self::CACHE_PREFIX;
         $class  = "App\\User";
@@ -49,7 +49,7 @@ class SquirrelModelTests extends PHPUnit_Framework_TestCase
         $this->assertContains( $primaryKey, $uniqueKeys, "Default return for models unique keys should return the primary key, but it did not." );
         $this->assertCount( 1, $uniqueKeys, "Expected default unique keys to come back with a single element, but it did not." );
 
-        SquirrelCache::setCacheActive(true); // Set global cache to true
+        SquirrelCache::setGlobalCacheActive(true); // Set global cache to true
         $this->assertTrue( $user->isCacheing(), "The global cache is true, and the model cache should return true for cacheing, but it is not." );
 
         $this->assertEquals( (24*60), $user->cacheExpirationMinutes(), "Default expiration date expects 24 hours, but it came back different." );
@@ -84,7 +84,7 @@ class SquirrelModelTests extends PHPUnit_Framework_TestCase
         $this->assertContains( $primaryKey, $uniqueKeys );
         $this->assertcount( 3, $uniqueKeys );
 
-        SquirrelCache::setCacheActive(true); // Set global cache to true
+        SquirrelCache::setGlobalCacheActive(true); // Set global cache to true
         $this->assertFalse( $user->isCacheing(), "Modified User Model has cache turned off, but it's still returning true." );
 
         $this->assertEquals( ((24*60) *7), $user->cacheExpirationMinutes() );
