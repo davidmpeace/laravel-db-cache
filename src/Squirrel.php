@@ -192,11 +192,22 @@ trait Squirrel
     /**
      * Returns just the primary cache key.
      * 
-     * @return [type] [description]
+     * @return string
      */
     final public function primaryCacheKey()
     {
         return SquirrelCache::primaryCacheKey($this, $this->getAttributes());
+    }
+
+    /**
+     * Overwriting the default model refresh function, so that when refresh is called, the model is forgotten first.
+     * 
+     * @return null
+     */
+    public function refresh()
+    {
+        $this->forget();
+        parent::refresh();
     }
 
     /*****************************************************************************************************************
