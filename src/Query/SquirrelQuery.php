@@ -170,6 +170,24 @@ class SquirrelQuery
     }
 
     /**
+     * There are occasions when the application erronoeously will attempt a DB search on a null primary key.  In this case, we 
+     * need to handle a special case and not query the database at all.  The return will always be empty.
+     * 
+     * @return boolean
+     */
+    public function isQueryingOnNullValue()
+    {
+        $wheres = $this->allExcludingDeletedAt();
+        foreach( $wheres as $where ) {
+            if( $where->operator == SquirrelQueryWhere::WHERE_CLAUSE_OPERATOR_IS && $where->type == SquirrelQueryWhere::WHERE_CLAUSE_TYPE_NULL ) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Validation which returns true if the set of WHERE objects have no duplicate column names.
      * 
      * @return bool

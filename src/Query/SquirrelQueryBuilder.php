@@ -15,6 +15,7 @@ use Eloquent\Cache\Timer\Timer;
 class SquirrelQueryBuilder extends Builder
 {
     private $sourceModel;
+    private $isQueryingOnNullValue = false;
 
     /**
      * Models with relationships may ultimately use this method to spawn child queries; as such, we need to ensure we 
@@ -85,6 +86,11 @@ class SquirrelQueryBuilder extends Builder
             return $cachedModels;
         }
 
+        if( $this->isQueryingOnNullValue ) {
+            // If the query is searching on a null value for the primary key, return an empty set - no need to do a query
+            return collect([]);
+        }
+
         $results = parent::get($columns);
 
         foreach ($results as $result) {
@@ -102,7 +108,9 @@ class SquirrelQueryBuilder extends Builder
      * @return array
      */
     private function findCachedModels()
-    {
+    {   
+        $this->isQueryingOnNullValue = false;
+
         if (!$this->sourceModel || !$this->sourceModel->isCacheing()) {
             return false;
         }
@@ -117,6 +125,11 @@ class SquirrelQueryBuilder extends Builder
         }
 
         $query = new SquirrelQuery($this->wheres, $this->sourceObjectDeletedAtColumnName());
+
+        if( $query->isQueryingOnNullValue() ) {
+            $this->isQueryingOnNullValue = true;
+            return false;
+        }
 
         $searchingKey   = $query->uniqueKeyString();
         $modelKeys      = SquirrelCache::uniqueKeys($this->sourceModel);
