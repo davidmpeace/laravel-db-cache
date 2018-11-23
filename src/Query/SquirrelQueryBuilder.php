@@ -15,7 +15,6 @@ use Eloquent\Cache\Timer\Timer;
 class SquirrelQueryBuilder extends Builder
 {
     private $sourceModel;
-    private $isQueryingOnNullValue = false;
 
     /**
      * Models with relationships may ultimately use this method to spawn child queries; as such, we need to ensure we 
@@ -79,16 +78,11 @@ class SquirrelQueryBuilder extends Builder
         $timer = new Timer();
 
         $cachedModels = $this->findCachedModels();
-        
+
         if (!empty($cachedModels)) {
             $cachedModels = collect($cachedModels);
             SquirrelCache::logCacheHit($this, $timer, $cachedModels);
             return $cachedModels;
-        }
-
-        if( $this->isQueryingOnNullValue ) {
-            // If the query is searching on a null value for the primary key, return an empty set - no need to do a query
-            return collect([]);
         }
 
         $results = parent::get($columns);
@@ -109,12 +103,10 @@ class SquirrelQueryBuilder extends Builder
      */
     private function findCachedModels()
     {   
-        $this->isQueryingOnNullValue = false;
-
         if (!$this->sourceModel || !$this->sourceModel->isCacheing()) {
             return false;
         }
-
+        
         $uniqueKeys   = $this->sourceModel->getUniqueKeys();
 
         // Early validation allows us to fail immediately on obvious unsupported query types
@@ -126,18 +118,13 @@ class SquirrelQueryBuilder extends Builder
 
         $query = new SquirrelQuery($this->wheres, $this->sourceObjectDeletedAtColumnName());
 
-        if( $query->isQueryingOnNullValue() ) {
-            $this->isQueryingOnNullValue = true;
-            return false;
-        }
-
         $searchingKey   = $query->uniqueKeyString();
         $modelKeys      = SquirrelCache::uniqueKeys($this->sourceModel);
         $cacheKeyPrefix = SquirrelCache::getCacheKeyPrefix(get_class($this->sourceModel));
 
         if (array_key_exists($searchingKey, $modelKeys)) {
             $cacheKeys = $query->cacheKeys($cacheKeyPrefix);
-
+            
             if (empty($cacheKeys)) {
                 return;
             }
